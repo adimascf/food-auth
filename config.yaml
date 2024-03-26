@@ -1,0 +1,12 @@
+input:
+  project_name: "batch3-150x2"
+  fastqs_path: "data/150x2fastqs/fastqs/"
+  reference_dir: "mammalian-12s-ref-seq"
+  metadata: "data/raw_data/12S-metadata-testing-samples.tsv"
+
+output:
+  processed_data: "data/processed"
+
+params:
+  report_name:
+    multiqc_report_name: "batch3-150x2"

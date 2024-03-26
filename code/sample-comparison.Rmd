@@ -1,0 +1,121 @@
+---
+title: "Stacked Barplot per Sample"
+output: html_document
+date:  "`r format(Sys.Date(),'%e %B, %Y')`"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r rel_abund_calculation, echo=FALSE, message=FALSE, warning=FALSE, paged.print=FALSE}
+library(tidyverse)
+
+rel_abund_calculation <- function(input_path){
+  taxa_count <- read_csv(input_path) %>%
+    rename_at(
+      vars(contains("data/processed/kraken2_results/")),
+      funs(str_replace_all(., "data/processed/kraken2_results/", ""))
+    ) %>%
+    rename_at(
+      vars(contains(".kraken2.txt")),
+      funs(str_replace_all(., ".kraken2.txt", ""))
+    ) %>% 
+    rowwise() %>%
+    mutate(`total_counts` = sum(c_across(where(is.numeric)))) %>%
+    ungroup() %>%
+    filter(total_counts >= 10000) %>% 
+    select(-total_counts)
+  
+  
+  threshold_count <- taxa_count %>% 
+    pivot_longer(cols = -Taxa, values_to = "counts") %>%
+    group_by(name) %>%
+    summarize(sum_count = sum(counts)) %>%
+    slice_tail(n=2) %>%
+    summarize(mean(sum_count)) %>%
+    ungroup() %>%
+    as.numeric()
+  
+  name_total_reads <- tibble("taxon" = "total_reads")
+  
+  total_reads <- taxa_count %>%
+    pivot_longer(!Taxa, names_to = "taxon", values_to = "count") %>%
+    mutate(count = if_else(condition = count > 2*threshold_count, 
+                           count, 0)) %>%
+    rename(sample_id = taxon, taxon = Taxa) %>%
+    group_by(sample_id) %>%
+    summarize(count = sum(count)) %>%
+    ungroup() %>%
+    pivot_wider(names_from = sample_id, values_from = count)
+  
+  total_reads <- bind_cols(name_total_reads, total_reads)
+  
+  report_rel_abund <- taxa_count %>%
+    pivot_longer(!Taxa, names_to = "taxon", values_to = "count") %>%
+    mutate(count = if_else(condition = count > 4*threshold_count, 
+                           count, 0)) %>%
+    rename(sample_id = taxon, taxon = Taxa) %>%
+    group_by(sample_id) %>%
+    mutate(rel_abund = 100*count / sum(count)) %>%
+    mutate(rel_abund = round(rel_abund, digits = 2)) %>%
+    ungroup() %>% 
+    select(-count)
+
+  return(report_rel_abund)
+  
+}
+
+input_dir <- "data/processed/aggregated-results"
+genus <- paste0("../", input_dir, "/agg-report-genus.csv")
+rel_abund_genus <- rel_abund_calculation(genus)
+```
+
+```{r echo=FALSE, fig.height=14, fig.width=12, message=FALSE, warning=FALSE}
+library(plotly)
+library(RColorBrewer)
+
+taxon_pool <- rel_abund_genus %>%
+    group_by(taxon) %>%
+    summarize(pool = mean(rel_abund, na.rm = T) < 3,
+              mean = mean(rel_abund, na.rm = T))
+
+stacked_plot <- inner_join(rel_abund_genus, taxon_pool,
+           by="taxon") %>%
+    mutate(taxon = if_else(pool, "Other",
+                           taxon)) %>%
+    group_by(taxon, sample_id) %>%
+    summarize(rel_abund = sum(rel_abund),
+              mean = min(mean),
+              .groups = "drop") %>%
+    mutate(taxon = factor(taxon),
+           taxon = fct_reorder(taxon, mean,
+                               .desc = T),
+           taxon = fct_shift(taxon, n = 1)) %>%
+
+    ggplot(aes(x = rel_abund,
+               y = sample_id,
+               fill = taxon)) +
+    geom_col() +
+    labs(x = "Relative Abundance (%)\n\n",
+         y = "Sample",
+         fill = "Genus") + 
+    theme_classic() +
+    scale_fill_manual(values = brewer.pal(n = 12, name = "Paired")) +
+    theme(plot.title = element_text(hjust = 0.5, size = 25),
+          axis.text.y = element_text(size = 15, color="black"),
+          axis.text.x = element_text(size = 15, color="black"),
+          axis.title.y = element_text(size = 20, color="black"),
+          axis.title.x = element_text(size = 20, color="black"),
+          legend.title = element_text(size = 15, color="black"),
+          legend.text = element_text(size = 15),
+          legend.key.height= unit(5, 'cm'),
+          legend.key.width= unit(5, 'cm'))
+
+ggplotly(stacked_plot)
+
+# ggsave("21-30_stacked_barplot_kraken.tiff",
+#        width = 8, height = 4)
+```
+

@@ -1,0 +1,284 @@
+---
+title: "Report Sample per Sample"
+output: html_document
+date:  "`r format(Sys.Date(),'%e %B, %Y')`"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, paged.print=TRUE}
+library(tidyverse)
+library(formattable)
+library(knitr)
+# Define the path to your Kraken 2 output file
+#input_file_path <- "../data/processed/kraken2_results/001.kraken2.txt"
+# Define the taxonomic level you're interested in (e.g., genus)
+
+kingdom_level <- "\tK\t"
+phylum_level <- "\tP\t"
+ordo_level <- "\tO\t"
+class_level <- "\tC\t"
+family_level <- "\tF\t"
+genus_level <- "\tG\t"
+species_level <- "\tS\t"
+
+agg_report_kingdom <- "../data/processed/aggregated-results/agg-report-kingdom.csv"
+agg_report_phylum <- "../data/processed/aggregated-results/agg-report-phylum.csv"
+agg_report_ordo <- "../data/processed/aggregated-results/agg-report-ordo.csv"
+agg_report_class <- "../data/processed/aggregated-results/agg-report-class.csv"
+agg_report_family <- "../data/processed/aggregated-results/agg-report-family.csv"
+agg_report_genus <- "../data/processed/aggregated-results/agg-report-genus.csv"
+agg_report_species <- "../data/processed/aggregated-results/agg-report-species.csv"
+
+taxon_reads_count <- function(input_file_path, taxonomic_level, agg_taxon_report) {
+  
+  taxa_count <- read_csv(agg_taxon_report) %>%
+    rename_at(
+      vars(contains("data/processed/kraken2_results/")),
+      funs(str_replace_all(., "data/processed/kraken2_results/", ""))
+    ) %>%
+    rename_at(
+      vars(contains(".kraken2.txt")),
+      funs(str_replace_all(., ".kraken2.txt", ""))
+    ) %>% 
+    rowwise() %>%
+    mutate(`total_counts` = sum(c_across(where(is.numeric)))) %>%
+      ungroup() %>%
+      filter(total_counts >= 10000) %>% 
+      select(-total_counts)
+    
+    
+    threshold_count <- taxa_count %>% 
+      pivot_longer(cols = -Taxa, values_to = "counts") %>%
+      group_by(name) %>%
+      summarize(sum_count = sum(counts)) %>%
+      slice_tail(n=2) %>%
+      summarize(mean(sum_count)) %>%
+      ungroup() %>%
+      as.numeric()
+  
+  read_lines(input_file_path) %>%
+  as_data_frame() %>%
+  filter(str_detect(value, taxonomic_level)) %>%
+  separate(value, into = c("pct_reads", "num_reads", "num_reads_only_clade", "rank_code", "taxid", "scientific_name"),
+           sep = "\t") %>%
+  mutate(scientific_name = str_replace_all(scientific_name, " ", ""),
+         num_reads = as.numeric(num_reads),
+         pct_reads = as.numeric(pct_reads),
+         num_reads_only_clade = as.numeric(num_reads_only_clade)) %>%
+  select(num_reads, scientific_name) %>%
+  filter(num_reads >= 2*threshold_count)
+}
+
+create_table <- function(input_file_path) {
+  get_unclassified_and_root <- read_lines(input_file_path) %>%
+    as_data_frame() %>%
+    separate(value, into = c("pct_reads", "num_reads", "num_reads_only_clade", "rank_code", "taxid", "scientific_name"),
+             sep = "\t") %>%
+    mutate(scientific_name = str_replace_all(scientific_name, " ", ""),
+           num_reads = as.numeric(num_reads),
+           pct_reads = as.numeric(pct_reads),
+           num_reads_only_clade = as.numeric(num_reads_only_clade)) %>%
+    select(num_reads, scientific_name) %>%
+    filter(., scientific_name == "unclassified" | scientific_name == "root")
+  
+  total_count <- get_unclassified_and_root$num_reads %>%
+    sum()
+  
+  kingdom_count <- taxon_reads_count(input_file_path, kingdom_level, agg_report_kingdom)$num_reads %>%
+    sum()
+  phylum_count <- taxon_reads_count(input_file_path, phylum_level, agg_report_phylum)$num_reads %>%
+    sum()
+  ordo_count <- taxon_reads_count(input_file_path, ordo_level, agg_report_ordo)$num_reads %>%
+    sum()
+  class_count <- taxon_reads_count(input_file_path, class_level, agg_report_class)$num_reads %>%
+    sum()
+  family_count <- taxon_reads_count(input_file_path, family_level, agg_report_family)$num_reads %>%
+    sum()
+  genus_count <- taxon_reads_count(input_file_path, genus_level, agg_report_genus)$num_reads %>%
+    sum()
+  species_count <- taxon_reads_count(input_file_path, species_level, agg_report_species)$num_reads %>%
+    sum()
+  
+  pct_level <- percent(c(kingdom_count/total_count, phylum_count/total_count, ordo_count/total_count,
+                         class_count/total_count, family_count/total_count, genus_count/total_count,
+                         species_count/total_count))
+  
+  reads_report <- data.frame(
+    `Taxonomic Level` = c("Kingdom", "Phylum", "Ordo", "Class", "Family", "Genus", "Species"),
+    `Number of Classified Reads` = c(kingdom_count, phylum_count, ordo_count, class_count, family_count,
+                       genus_count, species_count),
+    `Percentage` = pct_level
+  )
+  
+  kable(reads_report,
+        col.names = c("Taxonomic Level", "Number of Classified Reads", "Percentage")
+  )
+}
+
+
+```
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, paged.print=TRUE, fig.width=13, fig.height=8}
+library(viridis)
+rel_abund_calculation <- function(input_path){
+  taxa_count <- read_csv(input_path) %>%
+    rename_at(
+      vars(contains("data/processed/kraken2_results/")),
+      funs(str_replace_all(., "data/processed/kraken2_results/", ""))
+    ) %>%
+    rename_at(
+      vars(contains(".kraken2.txt")),
+      funs(str_replace_all(., ".kraken2.txt", ""))
+    ) %>% 
+    rowwise() %>%
+    mutate(`total_counts` = sum(c_across(where(is.numeric)))) %>%
+    ungroup() %>%
+    filter(total_counts >= 10000) %>% 
+    select(-total_counts)
+  
+  
+  threshold_count <- taxa_count %>% 
+    pivot_longer(cols = -Taxa, values_to = "counts") %>%
+    group_by(name) %>%
+    summarize(sum_count = sum(counts)) %>%
+    slice_tail(n=2) %>%
+    summarize(mean(sum_count)) %>%
+    ungroup() %>%
+    as.numeric()
+  
+  name_total_reads <- tibble("taxon" = "total_reads")
+  
+  total_reads <- taxa_count %>%
+    pivot_longer(!Taxa, names_to = "taxon", values_to = "count") %>%
+    mutate(count = if_else(condition = count > 2*threshold_count, 
+                           count, 0)) %>%
+    rename(sample_id = taxon, taxon = Taxa) %>%
+    group_by(sample_id) %>%
+    summarize(count = sum(count)) %>%
+    ungroup() %>%
+    pivot_wider(names_from = sample_id, values_from = count)
+  
+  total_reads <- bind_cols(name_total_reads, total_reads)
+  
+  report_rel_abund <- taxa_count %>%
+    pivot_longer(!Taxa, names_to = "taxon", values_to = "count") %>%
+    mutate(count = if_else(condition = count > 4*threshold_count, 
+                           count, 0)) %>%
+    rename(sample_id = taxon, taxon = Taxa) %>%
+    group_by(sample_id) %>%
+    mutate(rel_abund = 100*count / sum(count)) %>%
+    mutate(rel_abund = round(rel_abund, digits = 2)) %>%
+    ungroup() %>% 
+    select(-count) %>%
+    pivot_wider(names_from = sample_id, values_from = rel_abund) %>%
+    bind_rows(., total_reads)
+  
+  
+  report_rel_abund_df <- as.data.frame(report_rel_abund)
+  report_rel_abund_df <- report_rel_abund_df[ , order(names(report_rel_abund_df))] %>%
+    select(taxon, everything())
+  return(report_rel_abund_df)
+  
+}
+
+input_dir <- "../data/processed/aggregated-results"
+genus <- paste0(input_dir, "/agg-report-genus.csv")
+all <- rel_abund_calculation(genus)
+
+create_barplot <- function(sample_name) {
+  th <- 0.00
+  sample_name_rel_abund <- all %>%
+    select(taxon, sample_name) %>%
+    filter(taxon != "total_reads") %>% 
+    rename("test" = sample_name) %>%
+    filter(test > 0) %>%
+    rename("rel_abund" = "test") 
+  
+  ggplot(sample_name_rel_abund, 
+         aes(x = rel_abund, y = taxon, fill = rel_abund)) +
+    geom_col() +
+      labs(x = "Relative Abundance (%)\n\n",
+         y = "Genus",
+         title = sample_name) + 
+   scale_fill_viridis("Relative\nAbundance (%)", direction = -1, alpha = 0.8) +
+    theme_classic() +
+    theme(plot.title = element_text(hjust = 0.5, size = 25),
+          axis.text.y = element_text(size = 15, color="black"),
+          axis.text.x = element_text(size = 15, color="black"),
+          axis.title.y = element_text(size = 20, color="black"),
+          axis.title.x = element_text(size = 20, color="black"))
+}
+```
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, paged.print=TRUE,  results='asis', fig.width=13, fig.height=8}
+library(htmltools)
+path <- "../data/processed/kraken2_results/"
+samples_list <- read_tsv("../data/processed/sample_names.txt", col_names = F) %>%
+  pull(.)
+
+show_plot <- function(plot_object) {
+  div(style="margin:auto;text-align:center", plot_object)
+}
+
+show_all <- function(barplot_path, table_path) {
+  
+  
+  show_plot(print(create_barplot(barplot_path)))
+  cat("\n")
+  show_plot(print(create_table(table_path)))
+  cat("\n")
+  
+}
+
+do.call(div, lapply(samples_list, function(i){
+
+  full_path <- paste0(path, i, ".kraken2.txt")
+  show_all(i, full_path)
+
+}))
+
+# for( i in samples_list){
+#   full_path <- paste0(path, i, ".kraken2.txt")
+#   s_barplot <- create_barplot(i)
+#   s_table <- create_table(full_path)
+#   print(s_barplot)
+#   cat("\n")
+#   print(s_table)
+#   cat("\n")
+# }
+
+
+
+# full_path <- paste0(path, "001", ".kraken2.txt")
+# show_all("001", full_path)
+# 
+# full_path <- paste0(path, "002", ".kraken2.txt")
+# show_all("002", full_path)
+
+
+
+
+
+# for( i in samples_list){
+#   full_path <- paste0(path, i, ".kraken2.txt")
+#   show_all(i, full_path)
+# }
+
+# for( i in samples_list){
+#   full_path <- paste0(path, i, ".kraken2.txt")
+#   s_barplot <- create_barplot(i)
+#   s_table <- create_table(full_path)
+#   print(s_barplot)
+#   cat("\n")
+#   print(s_table)
+#   cat("\n")
+# }
+
+```
