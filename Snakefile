@@ -95,7 +95,7 @@ rule per_sample_report:
         report_family = "data/processed/aggregated-results/agg-report-family.csv",
         report_ordo = "data/processed/aggregated-results/agg-report-ordo.csv",
         report_class = "data/processed/aggregated-results/agg-report-class.csv",
-	report_phylum = "data/processed/aggregated-results/agg-report-phylum.csv",
+	    report_phylum = "data/processed/aggregated-results/agg-report-phylum.csv",
         report_kingdom = "data/processed/aggregated-results/agg-report-kingdom.csv",
         report_domain = "data/processed/aggregated-results/agg-report-domain.csv",
 
@@ -128,4 +128,44 @@ rule sample_comparison:
         test -f {input.report_genus} &&
         R -e "library(rmarkdown); render('{input.script}')" &&
         mv code/sample-comparison.html {params.output_path}
+        """
+
+rule running_all:
+    input:
+        script_relabund = "data/processed/aggregated-results",
+        input_relabund = "data/processed/aggregated-results",
+        script_per_sample = "code/report_per_sample.Rmd",
+        report_species = "data/processed/aggregated-results/agg-report-species.csv",
+        report_genus = "data/processed/aggregated-results/agg-report-genus.csv",
+        report_family = "data/processed/aggregated-results/agg-report-family.csv",
+        report_ordo = "data/processed/aggregated-results/agg-report-ordo.csv",
+        report_class = "data/processed/aggregated-results/agg-report-class.csv",
+	    report_phylum = "data/processed/aggregated-results/agg-report-phylum.csv",
+        report_kingdom = "data/processed/aggregated-results/agg-report-kingdom.csv",
+        report_domain = "data/processed/aggregated-results/agg-report-domain.csv",
+        script_comparison = "code/sample-comparison.Rmd",
+        input_comparison = "data/processed/aggregated-results/agg-report-genus.csv" # genus data
+    
+    params:
+        output_relabund = output_rel_abunnd,
+        output_per_sample = output_each_sample_path,
+        output_comparison = output_genus_comparison_path
+
+
+    shell:
+        """
+        # realtive abundance calculation
+        Rscript {input.script_relabund} {input.input_relabund} {params.output_relabund} &&
+
+        # per sample report
+        test -f {input.report_species} && test -f {input.report_genus} && test -f {input.report_family} && test -f {input.report_ordo} &&
+        test -f {input.report_class} && test -f {input.report_class} && test -f {input.report_phylum} && test -f {input.report_kingdom} && test -f {input.report_domain} && 
+        ls data/processed/kraken2_results/ | cut -d "." -f 1 - > data/processed/sample_names.txt &&
+        R -e "library(rmarkdown); render('{input.script_per_sample}')" &&
+        mv code/report_per_sample.html {params.output_per_sample} &&
+
+        # sample comparison
+        test -f {input.input_comparison} &&
+        R -e "library(rmarkdown); render('{input.script_comparison}')" &&
+        mv code/sample-comparison.html {params.output_comparison}
         """
