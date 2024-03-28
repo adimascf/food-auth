@@ -1,0 +1,40 @@
+---
+title: "Food Authentification"
+output:
+ github_document:
+  html_preview: false
+---
+
+This repository contains codes and snakemake workflow for running food authentification using NGS amplicon data. This workflow processes fastqs files for 48 samples with 2 negative controls.
+
+
+
+```{r library_calls, include=FALSE}
+library(tidyverse)
+library(readxl)
+library(ggtext)
+library(RColorBrewer)
+library(xlsx)
+library(formattable)
+library(knitr)
+```
+
+### Dependencies:
+
+-   [fastp 0.23.4](https://github.com/OpenGene/fastp)
+-   [Kraken version 2.1.3](https://github.com/DerrickWood/kraken2)
+-   [multiqc, version 1.16](https://github.com/MultiQC/MultiQC)
+-   `r R.version.string`
+    -   `tidyverse` (v. `r packageVersion("tidyverse")`)
+    -   `readxl` (v. `r packageVersion("readxl")`)
+    -   `rmarkdown` (v. `r packageVersion("rmarkdown")`)
+    -   `ggtext` (v. `r packageVersion("ggtext")`)
+    -   `RColorBrewer` (v. `r packageVersion("RColorBrewer")`)
+    -   `formattable` (v. `r packageVersion("formattable")`)
+    -   `knitr` (v. `r packageVersion("knitr")`)
+
+### My computer
+
+```{r sesion_info, echo=FALSE}
+sessionInfo()
+```
