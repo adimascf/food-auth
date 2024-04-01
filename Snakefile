@@ -8,12 +8,12 @@ print(config)
 input_fastq = config["input"]["fastqs_path"]
 processed_data = config["output"]["processed_data"]
 multiqc_name = config["input"]["project_name"]
-output_rel_abunnd = config["input"]["project_name"] + "rel_abund.xlsx"
 output_each_sample = config["input"]["project_name"] + "each_sample.html"
 output_genus_comparison = config["input"]["project_name"] + "comparsion.html"
 
 output_each_sample_path = "reports/" + output_each_sample
 output_genus_comparison_path = "reports/" + output_genus_comparison
+output_rel_abunnd = "reports/" + config["input"]["project_name"] + "_rel_abund.xlsx"
 
 ## Main rules definitions ###
 rule run_fastp_preprocessing:
