@@ -156,7 +156,7 @@ rel_abund_calculation <- function(input_path){
     rowwise() %>%
     mutate(`total_counts` = sum(c_across(where(is.numeric)))) %>%
     ungroup() %>%
-    filter(total_counts >= 10000) %>% 
+    filter(total_counts >= 1) %>% 
     select(-total_counts)
   
   
@@ -185,7 +185,7 @@ rel_abund_calculation <- function(input_path){
   
   report_rel_abund <- taxa_count %>%
     pivot_longer(!Taxa, names_to = "taxon", values_to = "count") %>%
-    mutate(count = if_else(condition = count > 4*threshold_count, 
+    mutate(count = if_else(condition = count > 2*threshold_count, 
                            count, 0)) %>%
     rename(sample_id = taxon, taxon = Taxa) %>%
     group_by(sample_id) %>%
@@ -199,7 +199,9 @@ rel_abund_calculation <- function(input_path){
   
   report_rel_abund_df <- as.data.frame(report_rel_abund)
   report_rel_abund_df <- report_rel_abund_df[ , order(names(report_rel_abund_df))] %>%
-    select(taxon, everything())
+    select(taxon, everything()) %>%
+    filter(!rowSums(is.na(select(., -1)) | select(., -1) == 0) == (ncol(.) - 1))
+  
   return(report_rel_abund_df)
   
 }
