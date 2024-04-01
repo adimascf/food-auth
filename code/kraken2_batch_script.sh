@@ -26,7 +26,7 @@ do
 		$1/${sample}*_R2_001.fastq.gz \
 		--report data/processed/kraken2_results/${sample}.kraken2.txt \
 		--gzip-compressed --threads 4 \
-	       	--minimum-hit-groups 4 --confidence 0.05 --report-zero-counts > data/processed/seq_class/${sample}.kraken2.txt;
+	       	--minimum-hit-groups 4 --confidence 0.1 --report-zero-counts > data/processed/seq_class/${sample}.kraken2.txt;
 done
 
 touch data/processed/kraken2_results/run_complete.txt
