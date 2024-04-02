@@ -8,16 +8,16 @@ files for 48 samples with 2 negative controls.
 ### Dependencies:
 
 - [fastp 0.23.4](https://github.com/OpenGene/fastp)
-- [Kraken version 2.1.3](https://github.com/DerrickWood/kraken2)
+- [Kraken2 version 2.1.3](https://github.com/DerrickWood/kraken2)
 - [multiqc, version 1.16](https://github.com/MultiQC/MultiQC)
 - R version 4.1.2 (2021-11-01)
   - `tidyverse` (v. 2.0.0)
   - `readxl` (v. 1.4.3)
-  - `rmarkdown` (v. 2.25)
+  - `rmarkdown` (v. 2.26)
   - `ggtext` (v. 0.1.2)
   - `RColorBrewer` (v. 1.1.3)
   - `formattable` (v. 0.2.1)
-  - `knitr` (v. 1.44)
+  - `knitr` (v. 1.45)
 
 ### My computer
 
@@ -41,7 +41,7 @@ files for 48 samples with 2 negative controls.
     ## [1] stats     graphics  grDevices utils     datasets  methods   base     
     ## 
     ## other attached packages:
-    ##  [1] knitr_1.44         formattable_0.2.1  xlsx_0.6.5         RColorBrewer_1.1-3
+    ##  [1] knitr_1.45         formattable_0.2.1  xlsx_0.6.5         RColorBrewer_1.1-3
     ##  [5] ggtext_0.1.2       readxl_1.4.3       lubridate_1.9.3    forcats_1.0.0     
     ##  [9] stringr_1.5.0      dplyr_1.1.3        purrr_1.0.2        readr_2.1.4       
     ## [13] tidyr_1.3.0        tibble_3.2.1       ggplot2_3.4.3      tidyverse_2.0.0   
@@ -54,6 +54,24 @@ files for 48 samples with 2 negative controls.
     ## [17] fastmap_1.1.1     rJava_1.0-6       xml2_1.3.5        withr_2.5.1      
     ## [21] htmlwidgets_1.6.2 xlsxjars_0.6.1    generics_0.1.3    vctrs_0.6.3      
     ## [25] hms_1.1.3         gridtext_0.1.5    grid_4.1.2        tidyselect_1.2.0 
-    ## [29] glue_1.6.2        R6_2.5.1          fansi_1.0.4       rmarkdown_2.25   
+    ## [29] glue_1.6.2        R6_2.5.1          fansi_1.0.4       rmarkdown_2.26   
     ## [33] tzdb_0.4.0        magrittr_2.0.3    scales_1.2.1      htmltools_0.5.7  
     ## [37] colorspace_2.1-0  utf8_1.2.3        stringi_1.7.12    munsell_0.5.0
+
+### Preparation steps
+
+- Install the required R packages: `Rscript install_packages.R`
+
+- Install snakemake Please follow this
+  [link](https://snakemake.readthedocs.io/en/stable/getting_started/installation.html)
+  for the instalation.
+
+- Install [fastp 0.23.4](https://github.com/OpenGene/fastp) and
+  [multiqc, version 1.16](https://github.com/MultiQC/MultiQC) using
+  conda or mamba
+
+- Install kraken2 Please follow this
+  [link](https://github.com/DerrickWood/kraken2/blob/master/docs/MANUAL.markdown)
+  for the installation.
+
+- Ask the author to get the kraken2 pre-built database
